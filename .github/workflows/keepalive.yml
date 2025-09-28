@@ -1,0 +1,32 @@
+name: Keep Website Awake and Check Backend
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # workflow triggers every 10 minutes
+  workflow_dispatch:         # allows manual trigger
+
+jobs:
+  keepalive-and-backend-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for random interval between 0 and 5 minutes
+        run: |
+          SECONDS=$((RANDOM % 301))  # 0-300 seconds = 0-5 minutes
+          echo "Waiting for $SECONDS seconds before sending the ping..."
+          sleep $SECONDS
+
+      - name: Ping the main website to keep it awake
+        run: |
+          echo "Pinging main website https://vacationbusservices.live/ ..."
+          curl -I --max-time 30 https://vacationbusservices.live/
+
+      - name: Check if backend is running by looking for 'VBS API is running...'
+        run: |
+          echo "Checking backend https://vbs-backend.onrender.com/ ..."
+          RESPONSE=$(curl -s --max-time 30 https://vbs-backend.onrender.com/)
+          if echo "$RESPONSE" | grep -q "VBS API is running..."; then
+            echo "Backend is UP: 'VBS API is running...' detected."
+          else
+            echo "ERROR: Backend may be DOWN. 'VBS API is running...' not found."
+            exit 1
+          fi
